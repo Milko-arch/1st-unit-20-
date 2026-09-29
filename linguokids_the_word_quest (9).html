@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinguoKids: The Word Quest</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Bubblegum+Sans&family=Fredoka+One&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --p-color: #6366f1;
+            --s-color: #f43f5e;
+            --bg-color: #f5f3ff;
+            /* Chocolate Palette */
+            --choco-dark: #3e2723;
+            --choco-mid: #5d4037;
+            --choco-light: #8d6e63;
+            --choco-gold: #d4a373;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            overflow-x: hidden;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="%23f59e0b" stroke="white" stroke-width="1.5" d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7.4-6.3-4.8-6.3 4.8 2.3-7.4-6-4.6h7.6z"/></svg>') 16 16, auto;
+        }
+        
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: radial-gradient(rgba(99, 102, 241, 0.05) 2px, transparent 2px);
+            background-size: 30px 30px;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        button, .cursor-pointer {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="%23ec4899" stroke="white" stroke-width="1.5" d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7.4-6.3-4.8-6.3 4.8 2.3-7.4-6-4.6h7.6z"/></svg>') 16 16, pointer !important;
+        }
+
+        .font-game { font-family: 'Bubblegum Sans', cursive; }
+        .font-bold-game { font-family: 'Fredoka One', cursive; }
+
+        .btn-bounce {
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 8px 0px rgba(0,0,0,0.1);
+        }
+        .btn-bounce:active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0px rgba(0,0,0,0.1);
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 4px solid white;
+            border-radius: 40px;
+        }
+
+        .cursor-pointer.glass {
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+        }
+        .cursor-pointer.glass:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(99, 102, 241, 0.15), inset 0 0 15px rgba(255,255,255,0.8);
+        }
+        
+        .auto-play-highlight {
+            transform: scale(1.15) !important;
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.6), inset 0 0 20px rgba(255,255,255,1) !important;
+            border-color: #6366f1 !important;
+            z-index: 20;
+        }
+
+        .wrong-highlight {
+            background-color: #fef08a !important; 
+            border-color: #eab308 !important;
+            animation: pulse-yellow 2s infinite;
+        }
+
+        @keyframes pulse-yellow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4); }
+            50% { box-shadow: 0 0 20px 10px rgba(234, 179, 8, 0.2); }
+        }
+
+        .modal-overlay {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(4px);
+        }
+
+        .sparkle {
+            position: absolute;
+            pointer-events: none;
+            background: white;
+            border-radius: 50%;
+            animation: sparkleAnim 0.8s ease-out forwards;
+            z-index: 100;
+        }
+
+        @keyframes sparkleAnim {
+            0% { transform: translate(-50%, -50%) scale(0) rotate(0deg); opacity: 1; }
+            100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.5) rotate(180deg); opacity: 0; }
+        }
+
+        /* WORD SPECIFIC ANIMATIONS */
+        .anim-cup {
+            animation: steamUp 1.2s ease-in-out infinite alternate;
+            filter: drop-shadow(0 8px 6px rgba(217, 119, 6, 0.3));
+        }
+        @keyframes steamUp {
+            0% { transform: translateY(0) scale(1) rotate(0deg); }
+            50% { transform: translateY(-8px) scale(1.1) rotate(-3deg); }
+            100% { transform: translateY(-14px) scale(1.15) rotate(3deg); }
+        }
+
+        .anim-frog {
+            animation: croakHop 1s cubic-bezier(0.28, 0.84, 0.42, 1);
+        }
+        @keyframes croakHop {
+            0% { transform: scale(1, 1) translateY(0); }
+            20% { transform: scale(1.25, 0.75) translateY(0); }
+            50% { transform: scale(0.85, 1.2) translateY(-35px) rotate(-5deg); }
+            75% { transform: scale(1.1, 0.9) translateY(0); }
+            100% { transform: scale(1, 1) translateY(0); }
+        }
+
+        .anim-kite {
+            animation: soarKite 1.5s ease-in-out infinite alternate;
+        }
+        @keyframes soarKite {
+            0% { transform: translateY(0) rotate(-10deg) scale(1); }
+            50% { transform: translateY(-18px) rotate(12deg) scale(1.1); }
+            100% { transform: translateY(-30px) rotate(-8deg) scale(1.15); }
+        }
+
+        .anim-into {
+            animation: slideIntoBox 0.8s ease-out forwards;
+        }
+        @keyframes slideIntoBox {
+            0% { transform: translateY(-40px) scale(0.5); opacity: 0.2; }
+            50% { transform: translateY(10px) scale(1.2); opacity: 1; }
+            100% { transform: translateY(0) scale(1); }
+        }
+
+        .anim-over {
+            animation: rainbowArch 1.2s ease-in-out forwards;
+        }
+        @keyframes rainbowArch {
+            0% { transform: translate(-20px, 10px) scale(0.8) rotate(-20deg); }
+            50% { transform: translate(0, -25px) scale(1.3) rotate(0deg); }
+            100% { transform: translate(20px, 0) scale(1) rotate(20deg); }
+        }
+
+        .anim-two {
+            animation: peaceWiggle 0.8s ease-in-out;
+        }
+        @keyframes peaceWiggle {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.3) rotate(-15deg); }
+            50% { transform: scale(1.3) rotate(15deg); }
+            75% { transform: scale(1.2) rotate(-10deg); }
+        }
+
+        .anim-cats {
+            animation: catPurrBounce 0.9s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes catPurrBounce {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.3, 0.8) rotate(-8deg); }
+            60% { transform: scale(0.9, 1.2) translateY(-15px) rotate(8deg); }
+            100% { transform: scale(1) translateY(0) rotate(0deg); }
+        }
+
+        .anim-snakes {
+            animation: snakeSlither 1.2s ease-in-out infinite alternate;
+        }
+        @keyframes snakeSlither {
+            0% { transform: translateX(-10px) skewX(-10deg) scale(1); }
+            50% { transform: translateX(10px) skewX(10deg) scale(1.1); }
+            100% { transform: translateX(-10px) skewX(-10deg) scale(1); }
+        }
+
+        .anim-dogs {
+            animation: dogBarkTail 0.8s ease-in-out;
+        }
+        @keyframes dogBarkTail {
+            0% { transform: scale(1) rotate(0); }
+            20% { transform: scale(1.2) rotate(-12deg) translateY(-10px); }
+            40% { transform: scale(1.2) rotate(12deg) translateY(-10px); }
+            60% { transform: scale(1.2) rotate(-8deg) translateY(-5px); }
+            100% { transform: scale(1) rotate(0) translateY(0); }
+        }
+
+        .anim-ants {
+            animation: antScuttle 0.6s linear infinite alternate;
+        }
+        @keyframes antScuttle {
+            0% { transform: translateX(-6px) rotate(-5deg); }
+            100% { transform: translateX(6px) rotate(5deg); }
+        }
+
+        .anim-bees {
+            animation: beeBuzz 0.5s ease-in-out infinite alternate;
+        }
+        @keyframes beeBuzz {
+            0% { transform: translate(-4px, -4px) rotate(-8deg) scale(1); }
+            50% { transform: translate(4px, 4px) rotate(8deg) scale(1.15); }
+            100% { transform: translate(-2px, 3px) rotate(-4deg) scale(1); }
+        }
+
+        .anim-owls {
+            animation: owlHoot 1.2s ease-in-out;
+        }
+        @keyframes owlHoot {
+            0% { transform: scale(1) rotate(0); }
+            30% { transform: scale(1.3) rotate(-20deg); }
+            60% { transform: scale(1.3) rotate(20deg); }
+            100% { transform: scale(1) rotate(0); }
+        }
+
+        .map-path {
+            stroke-dasharray: 10;
+            animation: dash 5s linear infinite;
+            filter: drop-shadow(0px 0px 8px rgba(99, 102, 241, 0.6));
+        }
+        @keyframes dash { to { stroke-dashoffset: -100; } }
+
+        .robot-talking img, .group img, .robot-container img {
+            animation: robotBlink 4s infinite;
+        }
+
+        @keyframes robotBlink {
+            0%, 45%, 55%, 100% { clip-path: inset(0 0 0 0); }
+            50% { clip-path: inset(25% 0 25% 0); } 
+        }
+
+        .is-talking img {
+            animation: mouthMove 0.25s infinite alternate ease-in-out, robotBlink 4s infinite;
+        }
+
+        @keyframes mouthMove {
+            from { transform: scaleY(1); }
+            to { transform: scaleY(0.9); } 
+        }
+
+        .robot-default-pos {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 60;
+        }
+
+        .robot-spelling-pos {
+            position: relative !important;
+            bottom: auto !important;
+            left: auto !important;
+            transform: none !important;
+            margin: 20px auto 0 auto;
+            z-index: 10;
+        }
+
+        .floating-feedback {
+            position: fixed;
+            font-family: 'Fredoka One', cursive;
+            font-size: 3.5rem;
+            color: #fde047;
+            text-shadow: 0px 4px 0px #d97706, 0px 0px 15px rgba(255,255,255,0.9);
+            z-index: 9999;
+            pointer-events: none;
+            animation: floatFeedback 1.5s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes floatFeedback {
+            0% { transform: translate(-50%, 0) scale(0.5) rotate(-10deg); opacity: 0; }
+            20% { transform: translate(-50%, -30px) scale(1.2) rotate(5deg); opacity: 1; }
+            80% { transform: translate(-50%, -60px) scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: translate(-50%, -90px) scale(0.8); opacity: 0; }
+        }
+
+        .phrase-card {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+        }
+        .phrase-card:hover {
+            transform: scale(1.03);
+            border-color: #818cf8;
+        }
+        .highlight-word {
+            font-size: 1.4em;
+            font-weight: 900;
+            color: #4f46e5;
+            display: inline-block;
+            margin: 0 4px;
+            text-transform: uppercase;
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.8);
+        }
+
+        #onboarding {
+            background: radial-gradient(circle at center, #ea580c 0%, #431407 100%);
+            box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.85);
+        }
+        .choco-title {
+            color: #fff7ed;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 25px rgba(249, 115, 22, 0.6);
+        }
+        .choco-subtitle {
+            color: #ffedd5;
+        }
+        .hero-label-blue { color: #93c5fd; }
+        .hero-label-pink { color: #f9a8d4; }
+
+        @keyframes ufoFlySuccess {
+            0% { transform: translate(50vw, 110vh) scale(0.5) rotate(0deg); opacity: 0; }
+            20% { transform: translate(50vw, 60vh) scale(1.5) rotate(-15deg); opacity: 1; }
+            40% { transform: translate(45vw, 55vh) scale(1.5) rotate(15deg); }
+            100% { transform: translate(120vw, -20vh) scale(0.3) rotate(45deg); opacity: 0; }
+        }
+        @keyframes ufoCrashErratic {
+            0% { transform: translate(-20vw, -20vh) scale(1) rotate(0deg); opacity: 1; }
+            15% { transform: translate(15vw, 10vh) scale(1.2) rotate(60deg); }
+            35% { transform: translate(25vw, 5vh) scale(1.1) rotate(-110deg); }
+            55% { transform: translate(40vw, 30vh) scale(1.3) rotate(220deg); }
+            75% { transform: translate(35vw, 25vh) scale(1.2) rotate(310deg); }
+            100% { transform: translate(50vw, 50vh) scale(1.6) rotate(480deg); opacity: 1; }
+        }
+        .animate-shake {
+            animation: screenShake 0.6s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes screenShake {
+            10%, 90% { transform: translate3d(-4px, 0, 0); }
+            20%, 80% { transform: translate3d(6px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-10px, 0, 0); }
+            40%, 60% { transform: translate3d(10px, 0, 0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <div class="fixed top-0 left-0 right-0 p-4 z-50 flex justify-between items-start pointer-events-none">
+        <div class="flex flex-col gap-2 pointer-events-auto">
+            <div class="glass px-6 py-2 flex items-center gap-3 shadow-xl">
+                <span class="text-3xl">💎</span>
+                <span id="stars-count" class="text-2xl font-bold-game text-indigo-600">0</span>
+            </div>
+        </div>
+
+        <div class="flex flex-col items-end gap-2 pointer-events-auto">
+            <div class="flex items-center gap-2">
+                <span id="hud-username" class="glass px-5 py-3 font-bold-game text-indigo-600 shadow-xl hidden bg-white text-sm uppercase"></span>
+                <button onclick="toggleFullscreen()" class="glass p-4 btn-bounce bg-white" title="Modo Kiosco / Pantalla Completa">
+                    <span class="text-2xl">⛶</span>
+                </button>
+                <button onclick="showSection('map')" class="glass p-4 btn-bounce bg-white">
+                    <span class="text-2xl">🏠</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mission-toast" class="robot-default-pos animate__animated animate__fadeInUp flex flex-col items-center gap-2 pointer-events-none">
+        <p class="bg-white/90 px-4 py-2 rounded-2xl border-2 border-indigo-200 text-xs font-bold text-indigo-800 uppercase shadow-lg text-center max-w-[200px]" id="leo-talk">Hello! Let's play.</p>
+        <div id="leo-avatar-container" class="w-20 h-20 bg-white/90 rounded-full border-4 border-white flex items-center justify-center overflow-hidden shadow-2xl robot-container pointer-events-auto">
+            <img id="hud-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=Leo&backgroundColor=3b82f6" class="w-full h-full transition-transform duration-200" alt="Avatar">
+        </div>
+    </div>
+
+    <!-- NEXT MISSION MODAL -->
+    <div id="next-mission-modal" class="fixed inset-0 z-[200] modal-overlay flex items-center justify-center p-6 hidden">
+        <div class="glass max-w-md w-full p-8 text-center animate__animated animate__bounceIn">
+            <div class="text-6xl mb-4">🌟</div>
+            <h3 class="text-3xl font-bold-game text-indigo-600 mb-2">EXCELLENT WORK!</h3>
+            <p class="text-slate-600 mb-8 font-medium">You have reviewed all the words.</p>
+            <div class="flex flex-col gap-4">
+                <button id="stay-here-btn" onclick="handleContinueHere()" class="w-full py-4 bg-slate-200 text-slate-700 rounded-2xl font-bold-game text-lg btn-bounce">STAY HERE</button>
+                <button onclick="goToSpellingFromModal()" class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold-game text-lg btn-bounce">GO TO MISSION 2 🕵️</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="name-modal" class="fixed inset-0 z-[200] modal-overlay flex items-center justify-center p-6 hidden">
+        <div class="glass max-w-md w-full p-8 text-center animate__animated animate__zoomIn">
+            <h3 class="text-3xl font-bold-game text-indigo-600 mb-4">WELCOME HERO!</h3>
+            <p class="text-slate-600 mb-6 font-medium">Type your name to start the quest:</p>
+            <input type="text" id="student-name" placeholder="Your name..." class="w-full p-4 rounded-2xl border-4 border-indigo-100 focus:border-indigo-400 outline-none text-xl text-center font-bold mb-6">
+            <button onclick="confirmNameAndStart()" class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold-game text-xl btn-bounce">START QUEST! 🚀</button>
+        </div>
+    </div>
+
+    <!-- FULLSCREEN INTRO VIDEO OVERLAY -->
+    <div id="intro-video-overlay" class="fixed inset-0 z-[300] bg-black flex items-center justify-center hidden">
+        <video id="intro-video" class="w-full h-full object-cover sm:object-contain" playsinline preload="auto">
+            <source src="https://raw.githubusercontent.com/Milko-arch/1st-unit-20-/f91fb26a87e0244c7614f8d9ead15f7fe9f805d5/1st%20grade%20unit%2020.mp4" type="video/mp4">
+            <source src="https://github.com/Milko-arch/1st-unit-20-/raw/f91fb26a87e0244c7614f8d9ead15f7fe9f805d5/1st%20grade%20unit%2020.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <div id="onboarding" class="fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 text-white overflow-y-auto">
+        <div class="max-w-xl w-full text-center py-10 flex-grow flex flex-col justify-center">
+            <div class="mb-4 animate__animated animate__fadeInDown">
+                <h1 class="text-4xl sm:text-6xl md:text-7xl font-bold-game tracking-wider choco-title uppercase break-words leading-tight">Footprints</h1>
+                <p class="text-xl sm:text-2xl md:text-3xl font-game choco-subtitle mt-2 uppercase tracking-widest">FIRST GRADE UNIT 20</p>
+                <p class="text-base sm:text-lg font-game opacity-50 mt-1 uppercase text-orange-200/70">Academy Adventure</p>
+            </div>
+            
+            <div class="w-24 h-1 bg-orange-400/30 mx-auto my-8 rounded-full"></div>
+
+            <h2 class="text-4xl font-game mb-8 animate__animated animate__fadeIn text-orange-200">CHOOSE YOUR HERO!</h2>
+            <div class="grid grid-cols-2 gap-6 mb-12">
+                <div onclick="selectPower('blue', 'Leo')" class="glass bg-white/10 border-white/20 p-6 cursor-pointer hover:scale-105 transition-all group shadow-2xl">
+                    <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Leo&backgroundColor=3b82f6" class="w-32 h-32 mx-auto group-hover:rotate-12 transition-transform rounded-full">
+                    <p class="mt-4 font-bold-game hero-label-blue uppercase">Blue Bolt</p>
+                </div>
+                <div onclick="selectPower('pink', 'Mia')" class="glass bg-white/10 border-white/20 p-6 cursor-pointer hover:scale-105 transition-all group shadow-2xl">
+                    <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Mia&backgroundColor=ec4899" class="w-32 h-32 mx-auto group-hover:-rotate-12 transition-transform rounded-full">
+                    <p class="mt-4 font-bold-game hero-label-pink uppercase">Pink Fire</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main id="game-container" class="flex-grow pt-24 pb-32 px-4 transition-all duration-500 opacity-0 flex flex-col">
+        
+        <!-- MISSION MAP -->
+        <section id="map-section" class="max-w-md mx-auto relative h-[85vh] w-full flex flex-col items-center justify-around">
+            <div class="absolute inset-0 flex justify-center -z-10">
+                <svg width="100" height="100%" class="opacity-20">
+                    <line x1="50" y1="0" x2="50" y2="100%" stroke="indigo" stroke-width="8" stroke-dasharray="15" class="map-path" />
+                </svg>
+            </div>
+
+            <button onclick="startMission('learn')" class="relative group animate__animated animate__pulse animate__infinite">
+                <div class="w-20 h-20 rounded-full bg-white border-8 border-indigo-400 flex items-center justify-center text-3xl shadow-2xl group-hover:scale-110 transition-transform">🚀</div>
+                <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-1 rounded-full font-bold text-[10px] whitespace-nowrap uppercase">Mission 1</div>
+            </button>
+
+            <button id="node-spelling" onclick="startMission('spelling')" class="relative group opacity-50 grayscale pointer-events-none">
+                <div class="w-20 h-20 rounded-full bg-white border-8 border-pink-400 flex items-center justify-center text-3xl shadow-2xl group-hover:scale-110 transition-transform">🛸</div>
+                <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-pink-600 text-white px-4 py-1 rounded-full font-bold text-[10px] whitespace-nowrap uppercase">Mission 2</div>
+            </button>
+
+            <button id="node-phrases" onclick="startMission('phrases')" class="relative group opacity-50 grayscale pointer-events-none">
+                <div class="w-20 h-20 rounded-full bg-white border-8 border-purple-400 flex items-center justify-center text-3xl shadow-2xl group-hover:scale-110 transition-transform">🪐</div>
+                <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-purple-600 text-white px-4 py-1 rounded-full font-bold text-[10px] whitespace-nowrap uppercase">Mission 3</div>
+            </button>
+
+            <button id="node-alphabet" onclick="startMission('alphabet')" class="relative group opacity-50 grayscale pointer-events-none">
+                <div class="w-20 h-20 rounded-full bg-white border-8 border-emerald-400 flex items-center justify-center text-3xl shadow-2xl group-hover:scale-110 transition-transform">🔤</div>
+                <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-4 py-1 rounded-full font-bold text-[10px] whitespace-nowrap uppercase">Mission 4</div>
+            </button>
+
+            <button id="node-mekorama" onclick="startMission('mekorama')" class="relative group opacity-50 grayscale pointer-events-none">
+                <div class="w-20 h-20 rounded-full bg-white border-8 border-amber-400 flex items-center justify-center text-3xl shadow-2xl group-hover:scale-110 transition-transform">🤖</div>
+                <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-amber-600 text-white px-4 py-1 rounded-full font-bold text-[10px] whitespace-nowrap uppercase">Mission 5</div>
+            </button>
+
+            <button id="node-quiz" onclick="startMission('quiz')" class="relative group opacity-50 grayscale pointer-events-none">
+                <div class="w-28 h-28 rounded-[40px] bg-gradient-to-tr from-yellow-400 to-orange-500 border-8 border-white flex items-center justify-center text-5xl shadow-2xl group-hover:scale-110 transition-transform">🌌</div>
+                <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-orange-600 text-white px-4 py-1 rounded-full font-bold text-[10px] whitespace-nowrap uppercase">Final Castle</div>
+            </button>
+        </section>
+
+        <!-- MISSION 2: SPELLING -->
+        <section id="spelling-section" class="hidden max-w-2xl mx-auto w-full">
+            <div class="glass p-10 text-center relative overflow-hidden">
+                <div class="flex items-center justify-center gap-4 mb-4">
+                    <div id="spelling-icon" class="text-9xl animate__animated animate__bounceIn inline-block">❓</div>
+                    <div class="flex flex-col gap-2">
+                        <button id="spelling-repeat-btn" class="w-16 h-16 bg-white border-4 border-indigo-400 rounded-full flex items-center justify-center text-2xl shadow-lg btn-bounce hover:bg-indigo-50 transition-colors">🔊</button>
+                        <button id="spelling-hint-btn" onclick="showSpellingHint()" class="w-16 h-16 bg-yellow-400 border-4 border-white rounded-full flex items-center justify-center text-2xl shadow-lg btn-bounce hidden animate__animated animate__jackInTheBox">💡</button>
+                    </div>
+                </div>
+                <div id="spelling-slots" class="flex justify-center flex-wrap gap-4 mb-12 min-h-[100px]"></div>
+                <div id="spelling-letters" class="flex flex-wrap justify-center gap-4"></div>
+                
+                <div class="mt-12 h-6 w-full bg-slate-100 rounded-full border-2 border-white overflow-hidden shadow-inner">
+                    <div id="spelling-progress" class="h-full bg-gradient-to-r from-pink-400 to-indigo-500 transition-all duration-700 ease-out" style="width: 0%"></div>
+                </div>
+                <p class="mt-2 text-xs font-bold text-slate-400 uppercase tracking-widest">Progress to Mission 3</p>
+
+                <div id="robot-anchor-spelling"></div>
+            </div>
+        </section>
+
+        <!-- MISSION 3: PHRASES -->
+        <section id="phrases-section" class="hidden max-w-4xl mx-auto w-full">
+            <div class="mb-8 text-center">
+                <h2 class="text-4xl font-bold-game text-indigo-600 uppercase">Master Phrases 📖</h2>
+                <p class="text-slate-500 font-medium">Listen and see the emoji sentences!</p>
+            </div>
+            <div id="phrases-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+            <div class="mt-12 flex justify-center">
+                <button onclick="finishPhrases()" class="px-12 py-5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-3xl font-bold-game text-2xl btn-bounce shadow-xl">
+                    I'M READY FOR MISSION 4! 🔤
+                </button>
+            </div>
+        </section>
+
+        <!-- MISSION 4: ALPHABETICAL ORDER -->
+        <section id="alphabet-section" class="hidden max-w-3xl mx-auto w-full">
+            <div class="glass p-8 text-center relative overflow-hidden">
+                <div class="mb-6">
+                    <h2 class="text-4xl font-bold-game text-emerald-600 uppercase">Alphabet Quest 🔤</h2>
+                    <p class="text-slate-600 font-medium mt-1">Tap the words in Alphabetical Order (A ➔ Z)!</p>
+                </div>
+
+                <div class="mb-6 p-4 bg-emerald-50 rounded-2xl border-2 border-emerald-200 flex flex-wrap items-center justify-between gap-2 shadow-inner">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">🎯</span>
+                        <span class="font-bold text-slate-700">Next Word (#<span id="alphabet-current-num" class="text-emerald-600 text-xl font-bold-game">1</span>):</span>
+                    </div>
+                    <div id="alphabet-hint-box" class="font-bold-game text-emerald-600 text-lg bg-white px-4 py-1 rounded-full border border-emerald-300">
+                        Starts with "<span id="alphabet-next-letter" class="text-xl uppercase">B</span>"
+                    </div>
+                </div>
+
+                <div id="alphabet-slots" class="flex flex-wrap justify-center gap-2 mb-8 min-h-[60px] p-3 bg-slate-100/80 rounded-2xl border-2 border-dashed border-slate-300"></div>
+
+                <div id="alphabet-pool" class="flex flex-wrap justify-center gap-3"></div>
+
+                <div class="mt-8 h-4 w-full bg-slate-100 rounded-full border border-white overflow-hidden shadow-inner">
+                    <div id="alphabet-progress" class="h-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-500 ease-out" style="width: 0%"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MISSION 1: LEARN -->
+        <section id="learn-section" class="hidden w-full">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 max-w-5xl mx-auto" id="learn-grid"></div>
+            
+            <div id="autoplay-container" class="mt-12 flex justify-center w-full animate__animated animate__fadeInUp">
+                <button onclick="startAutoLearn()" class="px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-3xl font-bold-game text-2xl btn-bounce shadow-[0_10px_20px_rgba(99,102,241,0.4)] flex items-center gap-3">
+                    <span>▶️</span> AUTO-PLAY LESSON
+                </button>
+            </div>
+        </section>
+
+        <section id="mekorama-section" class="hidden max-w-4xl mx-auto w-full relative">
+            <div class="glass p-6 text-center relative overflow-hidden flex flex-col items-center">
+                <div class="flex items-center justify-between w-full mb-4 px-2">
+                    <div class="text-left">
+                        <h2 class="text-3xl font-bold-game text-amber-600 uppercase tracking-wide">Mekorama B-01 🤖</h2>
+                        <p class="text-xs font-bold text-slate-500 uppercase">Guide Robot B to the Red Goal Spot!</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="rotateMekoramaCamera(-1)" class="w-12 h-12 glass font-bold text-xl btn-bounce bg-white text-indigo-600 rounded-2xl flex items-center justify-center shadow">↺</button>
+                        <button onclick="rotateMekoramaCamera(1)" class="w-12 h-12 glass font-bold text-xl btn-bounce bg-white text-indigo-600 rounded-2xl flex items-center justify-center shadow">↻</button>
+                        <button onclick="resetMekoramaLevel()" class="w-12 h-12 glass font-bold text-xl btn-bounce bg-amber-500 text-white rounded-2xl flex items-center justify-center shadow">🔄</button>
+                    </div>
+                </div>
+
+                <!-- 3D Canvas Container -->
+                <div id="mekorama-container" class="w-full h-[520px] rounded-3xl overflow-hidden relative border-4 border-white shadow-2xl cursor-grab active:cursor-grabbing bg-[#BFE3F7]">
+                    <div id="mekorama-tap-hint" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-md text-white text-xs font-bold px-4 py-2 rounded-full pointer-events-none transition-opacity duration-500">
+                        👆 Tap walkable blocks to move | Drag horizontally to rotate camera
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FINAL MISSION: CASTLE QUIZ -->
+        <section id="quiz-section" class="hidden max-w-2xl mx-auto w-full">
+            <div id="quiz-card" class="glass p-12 text-center shadow-2xl relative min-h-[500px] flex flex-col justify-center">
+            </div>
+        </section>
+
+    </main>
+
+    <footer id="main-footer" class="w-full py-6 text-center text-indigo-400 font-medium text-sm opacity-60">
+        By Ing. Milko Gonzales C
+    </footer>
+
+    <script>
+        const ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbyAq9DVA2ee7Vtge9vND5PeucQposM_rYbup_nkP4DSvBxAkYmVBDcSeM3FefSy1g9x/exec";
+
+        function enableKioskMode() {
+            const docEl = document.documentElement;
+            if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
+                if (docEl.requestFullscreen) {
+                    docEl.requestFullscreen().catch(() => {});
+                } else if (docEl.webkitRequestFullscreen) {
+                    docEl.webkitRequestFullscreen();
+                } else if (docEl.mozRequestFullScreen) {
+                    docEl.mozRequestFullScreen();
+                } else if (docEl.msRequestFullscreen) {
+                    docEl.msRequestFullscreen();
+                }
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
+                enableKioskMode();
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(() => {});
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        // Inicia el modo kiosco inmediatamente desde la primera interacción en pantalla
+        window.addEventListener('click', enableKioskMode);
+        window.addEventListener('touchstart', enableKioskMode);
+
+        let audioCtx;
+        const originalVocabulary = [
+            { word: 'CUP', icon: '☕' },
+            { word: 'CUPS', icon: '🥤🥤' },
+            { word: 'FROG', icon: '🐸' },
+            { word: 'FROGS', icon: '🐸🐸' },
+            { word: 'KITE', icon: '🪁' },
+            { word: 'KITES', icon: '🪁🪁' },
+            { word: 'INTO', icon: '📥' },
+            { word: 'OVER', icon: '🌈' },
+            { word: 'TWO', icon: '✌️' },
+            { word: 'CATS', icon: '🐱🐱' },
+            { word: 'SNAKES', icon: '🐍🐍' },
+            { word: 'DOGS', icon: '🐶🐶' },
+            { word: 'ANTS', icon: '🐜🐜' },
+            { word: 'BEES', icon: '🐝🐝' },
+            { word: 'OWLS', icon: '🦉🦉' }
+        ];
+
+        const mission4Vocabulary = [];
+
+        const phrasesData = [
+            { phrase: "☕ Pour warm tea in the <span class='highlight-word'>CUP</span>.", word: "CUP", emojiPhrase: "☕ 🍵 Warm Tea" },
+            { phrase: "🥤🥤 We have two red <span class='highlight-word'>CUPS</span> on the table.", word: "CUPS", emojiPhrase: "🥤🥤 🥛 Red Cups" },
+            { phrase: "🐸 The green <span class='highlight-word'>FROG</span> jumps high.", word: "FROG", emojiPhrase: "🐸 🌾 Green Frog" },
+            { phrase: "🐸🐸 Three little <span class='highlight-word'>FROGS</span> sit near the pond.", word: "FROGS", emojiPhrase: "🐸🐸 🌊 Little Frogs" },
+            { phrase: "🪁 Fly a big colorful <span class='highlight-word'>KITE</span> in the sky.", word: "KITE", emojiPhrase: "🪁 ☁️ Fly Kite" },
+            { phrase: "🪁🪁 Look at the pretty <span class='highlight-word'>KITES</span> in the air.", word: "KITES", emojiPhrase: "🪁🪁 🌬️ Pretty Kites" },
+            { phrase: "📥 Walk <span class='highlight-word'>INTO</span> the room with a smile.", word: "INTO", emojiPhrase: "📥 🚪 Walk Inside" },
+            { phrase: "🌈 The bird flies <span class='highlight-word'>OVER</span> the high tree.", word: "OVER", emojiPhrase: "🌈 🌳 Fly Over" },
+            { phrase: "✌️ I have <span class='highlight-word'>TWO</span> eyes and two ears.", word: "TWO", emojiPhrase: "✌️ 👀 Two Eyes" },
+            { phrase: "🐱🐱 The cute <span class='highlight-word'>CATS</span> love to play.", word: "CATS", emojiPhrase: "🐱🐱 🧶 Cute Cats" },
+            { phrase: "🐍🐍 Green <span class='highlight-word'>SNAKES</span> slither in the grass.", word: "SNAKES", emojiPhrase: "🐍🐍 🌿 Green Snakes" },
+            { phrase: "🐶🐶 Happy <span class='highlight-word'>DOGS</span> run and bark.", word: "DOGS", emojiPhrase: "🐶🐶 ⚽ Happy Dogs" },
+            { phrase: "🐜🐜 Tiny <span class='highlight-word'>ANTS</span> march in a line.", word: "ANTS", emojiPhrase: "🐜🐜 🔍 Tiny Ants" },
+            { phrase: "🐝🐝 Busy <span class='highlight-word'>BEES</span> make sweet honey.", word: "BEES", emojiPhrase: "🐝🐝 🍯 Sweet Honey" },
+            { phrase: "🦉🦉 Wise <span class='highlight-word'>OWLS</span> hoot in the night.", word: "OWLS", emojiPhrase: "🦉🦉 🌙 Wise Owls" }
+        ];
+
+        // Map vocabulary words to their respective animation CSS classes
+        const wordAnimationClasses = {
+            'CUP': 'anim-cup',
+            'CUPS': 'anim-cup',
+            'FROG': 'anim-frog',
+            'FROGS': 'anim-frog',
+            'KITE': 'anim-kite',
+            'KITES': 'anim-kite',
+            'INTO': 'anim-into',
+            'OVER': 'anim-over',
+            'TWO': 'anim-two',
+            'CATS': 'anim-cats',
+            'SNAKES': 'anim-snakes',
+            'DOGS': 'anim-dogs',
+            'ANTS': 'anim-ants',
+            'BEES': 'anim-bees',
+            'OWLS': 'anim-owls'
+        };
+
+        function triggerIconAnimation(word, element) {
+            if (!element) return;
+            const animClass = wordAnimationClasses[word.toUpperCase()];
+            if (animClass) {
+                element.classList.remove(animClass, 'animate__bounceIn', 'animate__zoomIn');
+                // Force reflow
+                void element.offsetWidth;
+                element.classList.add(animClass);
+                setTimeout(() => {
+                    element.classList.remove(animClass);
+                }, 2000);
+            }
+        }
+
+        function triggerHaptic(type = 'success') {
+            if (navigator.vibrate) {
+                if (type === 'error') navigator.vibrate([100, 50, 100]);
+                else navigator.vibrate(50);
+            }
+        }
+
+        function showFloatingFeedback(msg) {
+            const praises = ['GREAT! 🌟', 'AWESOME! 🚀', 'SUPER! 💎', 'EXCELLENT! 👑', 'PERFECT! ✨'];
+            const text = msg || praises[Math.floor(Math.random() * praises.length)];
+            const fb = document.createElement('div');
+            fb.className = 'floating-feedback';
+            fb.innerText = text;
+            fb.style.left = '50%';
+            fb.style.top = '40%';
+            document.body.appendChild(fb);
+            setTimeout(() => fb.remove(), 1500);
+        }
+
+        function showComboFeedback(streak) {
+            const fb = document.createElement('div');
+            fb.className = 'floating-feedback';
+            fb.innerText = `🔥 ${streak} IN A ROW!`;
+            fb.style.left = '50%';
+            fb.style.top = '30%';
+            document.body.appendChild(fb);
+            setTimeout(() => fb.remove(), 1500);
+        }
+
+        function runUFOAnimation(isSuccess) {
+            const ufo = document.createElement('div');
+            ufo.innerText = isSuccess ? '🛸✨' : '🛸💥';
+            ufo.style.position = 'fixed';
+            ufo.style.fontSize = '4rem';
+            ufo.style.zIndex = '9999';
+            ufo.style.pointerEvents = 'none';
+            ufo.style.animation = isSuccess ? 'ufoFlySuccess 2s forwards' : 'ufoCrashErratic 2s forwards';
+            document.body.appendChild(ufo);
+            if (!isSuccess) {
+                document.body.classList.add('animate-shake');
+                setTimeout(() => document.body.classList.remove('animate-shake'), 600);
+            }
+            setTimeout(() => ufo.remove(), 2100);
+        }
+
+        let state = {
+            stars: 0,
+            userPower: 'blue',
+            heroName: 'Leo',
+            studentName: '',
+            currentSection: 'map',
+            spellingIdx: 0,
+            spellingErrors: 0,
+            alphabetIdx: 0,
+            quizIdx: 0,
+            quizCorrect: 0,
+            quizStreak: 0,
+            isAutoPlaying: false,
+            currentVocab: [...originalVocabulary, ...mission4Vocabulary],
+            unlockedLevels: ['learn'],
+            finalScore: 0,
+            learnedWords: new Set(),
+            readPhrases: new Set(),
+            wrongQuizWords: new Set()
+        };
+
+        const sortedAlphabeticalList = [...originalVocabulary].sort((a, b) => a.word.localeCompare(b.word));
+
+        function selectPower(color, name) {
+            state.userPower = color;
+            state.heroName = name;
+            document.documentElement.style.setProperty('--p-color', color === 'blue' ? '#6366f1' : '#ec4899');
+            
+            const bgColor = color === 'blue' ? '3b82f6' : 'ec4899';
+            document.getElementById('hud-avatar').src = `https://api.dicebear.com/7.x/bottts/svg?seed=${name}&backgroundColor=${bgColor}`;
+            document.getElementById('name-modal').classList.remove('hidden');
+        }
+
+        function confirmNameAndStart() {
+            const inputName = document.getElementById('student-name').value;
+            if(!inputName.trim()) {
+                document.getElementById('student-name').classList.add('animate__animated', 'animate__shakeX', 'border-red-400');
+                triggerHaptic('error');
+                setTimeout(() => document.getElementById('student-name').classList.remove('animate__animated', 'animate__shakeX'), 500);
+                return;
+            }
+            state.studentName = inputName;
+            
+            const hudUsername = document.getElementById('hud-username');
+            if (hudUsername) {
+                hudUsername.innerText = inputName;
+                hudUsername.classList.remove('hidden');
+            }
+
+            document.getElementById('name-modal').classList.add('hidden');
+            document.getElementById('onboarding').classList.add('animate__animated', 'animate__fadeOutUp');
+            setTimeout(() => {
+                document.getElementById('onboarding').classList.add('hidden');
+                
+                const videoOverlay = document.getElementById('intro-video-overlay');
+                const video = document.getElementById('intro-video');
+
+                const startQuestMap = () => {
+                    if (videoOverlay) videoOverlay.classList.add('hidden');
+                    document.getElementById('game-container').classList.remove('opacity-0');
+                    updateSpeech(`Hi ${state.studentName}! I'm ${state.heroName}. Welcome to the Quest!`);
+                    confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 } }); 
+                    triggerHaptic('success');
+                };
+
+                if (videoOverlay && video) {
+                    videoOverlay.classList.remove('hidden');
+                    video.currentTime = 0;
+                    video.onended = () => {
+                        startQuestMap();
+                    };
+                    video.onerror = () => {
+                        console.error("Video play error, loading map...");
+                        startQuestMap();
+                    };
+                    const playPromise = video.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(err => {
+                            console.warn("Autoplay error or blocked:", err);
+                            startQuestMap();
+                        });
+                    }
+                } else {
+                    startQuestMap();
+                }
+            }, 500);
+        }
+
+        function updateSpeech(text) {
+            document.getElementById('leo-talk').innerText = text;
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'en-US';
+            const avatarContainer = document.getElementById('leo-avatar-container');
+            utter.onstart = () => avatarContainer.classList.add('is-talking');
+            utter.onend = () => avatarContainer.classList.remove('is-talking');
+            speechSynthesis.speak(utter);
+        }
+
+        function playWord(word) {
+            speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(word.toLowerCase());
+            utter.lang = 'en-US';
+            utter.rate = 0.7;
+            speechSynthesis.speak(utter);
+        }
+
+        function playPhrase(text) {
+            speechSynthesis.cancel();
+            const cleanText = text.replace(/<[^>]*>/g, '').replace(/[^\w\s\?!\.,']/g, '');
+            const utter = new SpeechSynthesisUtterance(cleanText);
+            utter.lang = 'en-US';
+            utter.rate = 0.8;
+            speechSynthesis.speak(utter);
+        }
+
+        function playLetter(letter) {
+            speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(letter.toLowerCase());
+            utter.lang = 'en-US';
+            utter.rate = 1.0;
+            speechSynthesis.speak(utter);
+        }
+
+        function startMission(id) {
+            state.isAutoPlaying = false; 
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            const target = document.getElementById(`${id}-section`);
+            if(target) target.classList.remove('hidden');
+            state.currentSection = id;
+            
+            const robot = document.getElementById('mission-toast');
+            if(id === 'spelling') {
+                document.getElementById('robot-anchor-spelling').appendChild(robot);
+                robot.classList.remove('robot-default-pos');
+                robot.classList.add('robot-spelling-pos');
+                state.spellingIdx = 0; 
+                state.spellingErrors = 0;
+                renderSpelling(); 
+            } else {
+                document.body.appendChild(robot);
+                robot.classList.remove('robot-spelling-pos');
+                robot.classList.add('robot-default-pos');
+                if(id === 'learn') renderLearn();
+                if(id === 'phrases') renderPhrases();
+                if(id === 'alphabet') { state.alphabetIdx = 0; renderAlphabet(); }
+                if(id === 'mekorama') { initMekorama3D(); }
+                if(id === 'quiz') { state.quizIdx = 0; state.quizCorrect = 0; state.quizStreak = 0; state.wrongQuizWords.clear(); renderQuiz(); }
+            }
+        }
+
+        function showSection(id) { startMission(id); }
+
+        function renderLearn() {
+            const grid = document.getElementById('learn-grid');
+            grid.innerHTML = originalVocabulary.map((v, i) => `
+                <div id="learn-card-${i}" onclick="learnClick(this, '${v.word}')" class="glass p-6 cursor-pointer btn-bounce flex flex-col items-center group relative transition-all duration-300 ${state.wrongQuizWords.has(v.word) ? 'wrong-highlight' : ''}">
+                    <div class="word-check absolute top-4 right-4 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white text-[10px] ${state.learnedWords.has(v.word) ? 'scale-100' : 'scale-0'} transition-transform">✓</div>
+                    <span class="vocab-icon text-5xl inline-block group-hover:scale-125 transition-transform">${v.icon}</span>
+                    <span class="mt-4 font-bold-game text-xl text-indigo-600 uppercase">${v.word}</span>
+                </div>
+            `).join('');
+            
+            const autoplayBtn = document.getElementById('autoplay-container');
+            if(autoplayBtn) autoplayBtn.classList.remove('hidden');
+            
+            if (state.wrongQuizWords.size > 0) {
+                updateSpeech("Please review the words highlighted in yellow!");
+            } else {
+                updateSpeech("Tap the cards to hear the words!");
+            }
+        }
+
+        async function startAutoLearn() {
+            if(state.isAutoPlaying) return;
+            state.isAutoPlaying = true;
+            document.getElementById('autoplay-container').classList.add('hidden');
+            updateSpeech("Listen carefully!");
+            
+            for(let i=0; i<originalVocabulary.length; i++) {
+                if(!state.isAutoPlaying || state.currentSection !== 'learn') break; 
+                const card = document.getElementById(`learn-card-${i}`);
+                if(card) {
+                    card.classList.add('auto-play-highlight');
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    learnClick(card, originalVocabulary[i].word);
+                    await new Promise(r => setTimeout(r, 2000));
+                    card.classList.remove('auto-play-highlight');
+                }
+            }
+            state.isAutoPlaying = false;
+        }
+
+        function learnClick(el, word) {
+            playWord(word);
+            createSparkles(el);
+            
+            const iconEl = el.querySelector('.vocab-icon');
+            if (iconEl) triggerIconAnimation(word, iconEl);
+
+            const check = el.querySelector('.word-check');
+            if (check && !state.learnedWords.has(word)) {
+                check.classList.remove('scale-0');
+                check.classList.add('scale-100', 'animate__animated', 'animate__bounceIn');
+                state.learnedWords.add(word);
+                updateStars(1);
+            }
+
+            if (state.learnedWords.size === originalVocabulary.length) {
+                if (!state.unlockedLevels.includes('spelling')) {
+                    state.unlockedLevels.push('spelling');
+                    const node = document.getElementById('node-spelling');
+                    node.classList.remove('opacity-50', 'grayscale', 'pointer-events-none');
+                    node.classList.add('animate__animated', 'animate__rubberBand');
+                }
+                setTimeout(showNextMissionModal, 1200);
+            }
+        }
+
+        function showNextMissionModal() {
+            document.getElementById('next-mission-modal').classList.remove('hidden');
+            triggerHaptic('success');
+        }
+
+        function closeNextMissionModal() {
+            document.getElementById('next-mission-modal').classList.add('hidden');
+        }
+
+        function handleContinueHere() {
+            state.learnedWords.clear();
+            if (state.currentSection === 'learn') {
+                renderLearn();
+            }
+            closeNextMissionModal();
+            updateSpeech("Ready to practice again!");
+        }
+
+        function goToSpellingFromModal() {
+            closeNextMissionModal();
+            startMission('spelling');
+        }
+
+        function renderSpelling() {
+            const progress = (state.spellingIdx / originalVocabulary.length) * 100;
+            const bar = document.getElementById('spelling-progress');
+            if(bar) bar.style.width = `${progress}%`;
+            document.getElementById('spelling-hint-btn').classList.add('hidden');
+
+            if (state.spellingIdx >= originalVocabulary.length) {
+                if(!state.unlockedLevels.includes('phrases')) {
+                    state.unlockedLevels.push('phrases');
+                    const node = document.getElementById('node-phrases');
+                    node.classList.remove('opacity-50', 'grayscale', 'pointer-events-none');
+                    node.classList.add('animate__animated', 'animate__bounceIn');
+                }
+                updateSpeech("Great job! Let's learn sentences.");
+                triggerHaptic('success');
+                setTimeout(() => startMission('phrases'), 2000);
+                return;
+            }
+
+            const current = originalVocabulary[state.spellingIdx];
+            const iconEl = document.getElementById('spelling-icon');
+            iconEl.innerText = current.icon;
+            document.getElementById('spelling-repeat-btn').onclick = () => {
+                playWord(current.word);
+                triggerIconAnimation(current.word, iconEl);
+            };
+
+            document.getElementById('spelling-slots').innerHTML = current.word.split('').map(() => `
+                <div class="w-14 h-16 border-4 border-dashed border-slate-300 rounded-2xl flex items-center justify-center text-3xl font-bold-game text-indigo-600 bg-white/50 transition-all duration-300 uppercase"></div>
+            `).join('');
+            
+            const letters = current.word.split('').sort(() => Math.random() - 0.5);
+            document.getElementById('spelling-letters').innerHTML = letters.map(l => `
+                <button onclick="checkLetter('${l}', this)" class="w-14 h-14 glass font-bold-game text-2xl text-slate-700 btn-bounce uppercase">${l}</button>
+            `).join('');
+            playWord(current.word);
+        }
+
+        function checkLetter(l, btn) {
+            const word = originalVocabulary[state.spellingIdx].word.toUpperCase();
+            const slots = document.getElementById('spelling-slots').children;
+            const next = Array.from(slots).findIndex(s => s.innerText === "");
+            playLetter(l);
+            
+            if(word[next] === l.toUpperCase()) {
+                slots[next].innerText = l.toUpperCase();
+                btn.classList.add('opacity-0', 'pointer-events-none');
+                if(Array.from(slots).every(s => s.innerText !== "")) {
+                    confetti({ particleCount: 30, spread: 60, origin: { y: 0.7 } });
+                    showFloatingFeedback(); 
+                    const iconEl = document.getElementById('spelling-icon');
+                    triggerIconAnimation(word, iconEl);
+                    setTimeout(() => playWord(word), 800);
+                    state.spellingIdx++;
+                    state.spellingErrors = 0; 
+                    setTimeout(renderSpelling, 2500);
+                }
+            } else {
+                state.spellingErrors++;
+                triggerHaptic('error');
+                btn.classList.add('animate__animated', 'animate__headShake', 'bg-red-50');
+                setTimeout(() => btn.classList.remove('animate__animated', 'animate__headShake', 'bg-red-50'), 500);
+                if(state.spellingErrors >= 3) document.getElementById('spelling-hint-btn').classList.remove('hidden');
+            }
+        }
+
+        function showSpellingHint() {
+            const word = originalVocabulary[state.spellingIdx].word.toUpperCase();
+            const slots = document.getElementById('spelling-slots').children;
+            const originalContents = Array.from(slots).map(s => s.innerText);
+            Array.from(slots).forEach((slot, i) => {
+                if(!slot.innerText) {
+                    slot.innerText = word[i];
+                    slot.classList.add('text-yellow-500', 'scale-110');
+                }
+            });
+            setTimeout(() => {
+                Array.from(slots).forEach((slot, i) => {
+                    if(!originalContents[i]) {
+                        slot.innerText = "";
+                        slot.classList.remove('text-yellow-500', 'scale-110');
+                    }
+                });
+            }, 800);
+        }
+
+        function renderPhrases() {
+            const grid = document.getElementById('phrases-grid');
+            grid.innerHTML = phrasesData.map((item, i) => `
+                <div onclick="phraseClick(this, '${item.word}', '${item.phrase.replace(/'/g, "\\'")}')" class="glass p-6 phrase-card flex flex-col gap-4 border-2 border-transparent relative group">
+                    <div class="phrase-check absolute top-4 right-4 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white text-[10px] scale-0 transition-transform ${state.readPhrases.has(item.word) ? 'scale-100' : ''}">✓</div>
+                    <div class="flex items-center justify-between">
+                        <span class="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-xs font-bold uppercase">Sentence ${i+1}</span>
+                    </div>
+                    <p class="text-2xl text-slate-700 leading-relaxed font-game">
+                        ${item.phrase}
+                    </p>
+                    <div class="mt-2 pt-4 border-t border-dashed border-indigo-100 text-3xl flex justify-center tracking-[0.5em]">
+                        <span class="phrase-emoji-inline inline-block">${item.emojiPhrase}</span>
+                    </div>
+                </div>
+            `).join('');
+            updateSpeech("Click on the sentences to hear them!");
+        }
+
+        function phraseClick(el, word, phraseText) {
+            playPhrase(phraseText);
+            createSparkles(el);
+            
+            const emojiEl = el.querySelector('.phrase-emoji-inline');
+            if(emojiEl) triggerIconAnimation(word, emojiEl);
+
+            const check = el.querySelector('.phrase-check');
+            if (check && !state.readPhrases.has(word)) {
+                check.classList.remove('scale-0');
+                check.classList.add('scale-100', 'animate__animated', 'animate__bounceIn');
+                state.readPhrases.add(word);
+                updateStars(2);
+                
+                if (state.readPhrases.size === phrasesData.length) {
+                    showFloatingFeedback();
+                    updateSpeech("Wonderful! You read all the sentences!");
+                }
+            }
+        }
+
+        function finishPhrases() {
+            if(!state.unlockedLevels.includes('alphabet')) {
+                state.unlockedLevels.push('alphabet');
+                const node = document.getElementById('node-alphabet');
+                if (node) {
+                    node.classList.remove('opacity-50', 'grayscale', 'pointer-events-none');
+                    node.classList.add('animate__animated', 'animate__rubberBand');
+                }
+            }
+            updateSpeech("Awesome! Now let's organize words alphabetically in Mission 4!");
+            triggerHaptic('success');
+            setTimeout(() => startMission('alphabet'), 1500);
+        }
+
+        let shuffledAlphabetPool = [];
+
+        function renderAlphabet() {
+            const currentCount = state.alphabetIdx;
+            const total = sortedAlphabeticalList.length;
+            
+            const progress = (currentCount / total) * 100;
+            const bar = document.getElementById('alphabet-progress');
+            if(bar) bar.style.width = `${progress}%`;
+
+            document.getElementById('alphabet-current-num').innerText = currentCount + 1;
+
+            if (currentCount >= total) {
+                finishAlphabet();
+                return;
+            }
+
+            const targetWord = sortedAlphabeticalList[currentCount].word;
+            document.getElementById('alphabet-next-letter').innerText = targetWord.charAt(0);
+
+            if (currentCount === 0) {
+                shuffledAlphabetPool = [...originalVocabulary].sort(() => Math.random() - 0.5);
+                document.getElementById('alphabet-slots').innerHTML = '';
+            }
+
+            const poolContainer = document.getElementById('alphabet-pool');
+            poolContainer.innerHTML = shuffledAlphabetPool.map(item => `
+                <button onclick="checkAlphabetWord('${item.word}', this)" class="glass px-5 py-3 font-bold-game text-xl text-indigo-700 btn-bounce uppercase flex items-center gap-2">
+                    <span class="alpha-btn-icon inline-block">${item.icon}</span> <span>${item.word}</span>
+                </button>
+            `).join('');
+
+            updateSpeech(`Word #${currentCount + 1}: Find the word starting with ${targetWord.charAt(0)}!`);
+        }
+
+        function checkAlphabetWord(word, btn) {
+            const expected = sortedAlphabeticalList[state.alphabetIdx];
+            playWord(word);
+
+            const iconEl = btn.querySelector('.alpha-btn-icon');
+            if(iconEl) triggerIconAnimation(word, iconEl);
+
+            if (word === expected.word) {
+                state.alphabetIdx++;
+                updateStars(1);
+                showFloatingFeedback();
+                confetti({ particleCount: 20, spread: 50 });
+
+                shuffledAlphabetPool = shuffledAlphabetPool.filter(item => item.word !== word);
+
+                const slotsContainer = document.getElementById('alphabet-slots');
+                const badge = document.createElement('div');
+                badge.className = 'bg-emerald-500 text-white font-bold-game text-sm px-3 py-1.5 rounded-xl shadow flex items-center gap-1 animate__animated animate__zoomIn';
+                badge.innerHTML = `<span class="opacity-75 text-[10px] bg-emerald-700 px-1.5 py-0.5 rounded-full">${state.alphabetIdx}</span> ${expected.icon} ${expected.word}`;
+                slotsContainer.appendChild(badge);
+
+                if (state.alphabetIdx >= sortedAlphabeticalList.length) {
+                    setTimeout(finishAlphabet, 1000);
+                } else {
+                    renderAlphabet();
+                }
+            } else {
+                triggerHaptic('error');
+                btn.classList.add('animate__animated', 'animate__headShake', 'bg-red-200');
+                setTimeout(() => btn.classList.remove('animate__animated', 'animate__headShake', 'bg-red-200'), 500);
+                updateSpeech(`Oops! Look closely for ${expected.word.charAt(0)}...`);
+            }
+        }
+
+        function finishAlphabet() {
+            if(!state.unlockedLevels.includes('mekorama')) {
+                state.unlockedLevels.push('mekorama');
+                const node = document.getElementById('node-mekorama');
+                if(node) {
+                    node.classList.remove('opacity-50', 'grayscale', 'pointer-events-none');
+                    node.classList.add('animate__animated', 'animate__rubberBand');
+                }
+            }
+            confetti({ particleCount: 100, spread: 100, origin: { y: 0.5 } });
+            updateSpeech("Fantastic! Now enter Mekorama Level B-01 in Mission 5!");
+            triggerHaptic('success');
+            setTimeout(() => startMission('mekorama'), 2000);
+        }
+
+        let mekoramaScene, mekoramaCamera, mekoramaRenderer, mekoramaRobotGroup, mekoramaGoalMesh;
+        let mekoramaBlocks = [];
+        let mekoramaPath = [];
+        let isMekoramaMoving = false;
+        let mekoramaCurrentGrid = { x: 1, y: 1, z: 1 };
+        const mekoramaGoalGrid = { x: 4, y: 2, z: 0 };
+        let mekoramaOrbitAngle = Math.PI / 4;
+        let mekoramaTargetOrbitAngle = Math.PI / 4;
+        let isMekoramaDragging = false;
+        let previousMouseX = 0;
+        let tapRingMesh = null;
+        let robotEyeMesh = null;
+        let robotLeftArm = null, robotRightArm = null;
+        let robotLeftLeg = null, robotRightLeg = null;
+        let robotTorso = null;
+        let mekoramaRaycaster = new THREE.Raycaster();
+        let mekoramaMouse = new THREE.Vector2();
+        let isMekoramaInitialized = false;
+
+        const B01_LAYOUT = [
+            // Starting platform (Grass top)
+            { x: 1, y: 1, z: 1, type: 'grass', start: true },
+            { x: 2, y: 1, z: 1, type: 'stone' },
+            { x: 3, y: 1, z: 1, type: 'stone' },
+            
+            // Stair & Upper walkway
+            { x: 3, y: 2, z: 2, type: 'stone' },
+            { x: 3, y: 2, z: 3, type: 'stone' },
+            { x: 3, y: 2, z: 4, type: 'grass' },
+            
+            // Turn across diorama
+            { x: 4, y: 2, z: 4, type: 'stone' },
+            { x: 5, y: 2, z: 4, type: 'brick' },
+            
+            // Path down & round
+            { x: 5, y: 1, z: 3, type: 'stone' },
+            { x: 5, y: 1, z: 2, type: 'stone' },
+            { x: 5, y: 1, z: 1, type: 'grass' },
+            
+            // Step up to goal
+            { x: 5, y: 2, z: 0, type: 'stone' },
+            { x: 4, y: 2, z: 0, type: 'stone', goal: true },
+            
+            // Supporting structure bases (Diorama floating core)
+            { x: 1, y: 0, z: 1, type: 'stone' },
+            { x: 2, y: 0, z: 1, type: 'brick' },
+            { x: 3, y: 0, z: 1, type: 'stone' },
+            { x: 3, y: 1, z: 2, type: 'stone' },
+            { x: 3, y: 1, z: 3, type: 'stone' },
+            { x: 4, y: 1, z: 4, type: 'brick' },
+            { x: 5, y: 1, z: 4, type: 'stone' },
+            { x: 5, y: 0, z: 3, type: 'stone' },
+            { x: 5, y: 0, z: 2, type: 'brick' },
+            { x: 5, y: 0, z: 1, type: 'stone' },
+            { x: 5, y: 1, z: 0, type: 'stone' },
+            { x: 4, y: 1, z: 0, type: 'brick' }
+        ];
+
+        function createMekoramaBlockGeometry() {
+            return new THREE.BoxGeometry(0.96, 0.96, 0.96);
+        }
+
+        function createMekoramaBlockMesh(blockData) {
+            const group = new THREE.Group();
+            const baseGeo = createMekoramaBlockGeometry();
+            
+            let mainMat;
+            if (blockData.type === 'grass') {
+                mainMat = new THREE.MeshStandardMaterial({ color: 0xA05A2C, roughness: 0.9 }); 
+                const topMat = new THREE.MeshStandardMaterial({ color: 0x61B329, roughness: 0.7 }); 
+                
+                const materials = [
+                    mainMat, mainMat, 
+                    topMat, mainMat,  
+                    mainMat, mainMat  
+                ];
+                const mesh = new THREE.Mesh(baseGeo, materials);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add(mesh);
+            } else if (blockData.type === 'brick') {
+                mainMat = new THREE.MeshStandardMaterial({ color: 0xC85A32, roughness: 0.8 });
+                const mesh = new THREE.Mesh(baseGeo, mainMat);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add(mesh);
+            } else {
+                mainMat = new THREE.MeshStandardMaterial({ color: 0xB0B3B8, roughness: 0.5 });
+                const mesh = new THREE.Mesh(baseGeo, mainMat);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add(mesh);
+            }
+
+            group.position.set(blockData.x, blockData.y, blockData.z);
+            group.userData = { gridX: blockData.x, gridY: blockData.y, gridZ: blockData.z, walkable: true };
+
+            if (blockData.goal) {
+                const goalGeo = new THREE.CylinderGeometry(0.3, 0.35, 0.1, 32);
+                const goalMat = new THREE.MeshStandardMaterial({ color: 0xFF3B30, roughness: 0.2, metalness: 0.1 });
+                mekoramaGoalMesh = new THREE.Mesh(goalGeo, goalMat);
+                mekoramaGoalMesh.position.set(0, 0.53, 0);
+                mekoramaGoalMesh.castShadow = true;
+                group.add(mekoramaGoalMesh);
+
+                const ringGeo = new THREE.RingGeometry(0.36, 0.42, 32);
+                const ringMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, side: THREE.DoubleSide });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.rotation.x = -Math.PI / 2;
+                ring.position.set(0, 0.49, 0);
+                group.add(ring);
+            }
+
+            return group;
+        }
+
+        function createRobotBMesh() {
+            const group = new THREE.Group();
+
+            // Body / Torso
+            const torsoGeo = new THREE.BoxGeometry(0.55, 0.6, 0.55);
+            const torsoMat = new THREE.MeshStandardMaterial({ color: 0xFFC107, roughness: 0.4, metalness: 0.1 });
+            robotTorso = new THREE.Mesh(torsoGeo, torsoMat);
+            robotTorso.position.y = 0.35;
+            robotTorso.castShadow = true;
+            group.add(robotTorso);
+
+            // Head
+            const headGeo = new THREE.SphereGeometry(0.22, 24, 24);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xFFB300, roughness: 0.3 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.set(0, 0.72, 0);
+            head.castShadow = true;
+            group.add(head);
+
+            // Antenna
+            const rodGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.18, 12);
+            const rodMat = new THREE.MeshStandardMaterial({ color: 0x757575, metalness: 0.8, roughness: 0.2 });
+            const rod = new THREE.Mesh(rodGeo, rodMat);
+            rod.position.set(0, 0.92, 0);
+            group.add(rod);
+
+            const tipGeo = new THREE.SphereGeometry(0.05, 16, 16);
+            const tipMat = new THREE.MeshStandardMaterial({ color: 0xFFC107 });
+            const tip = new THREE.Mesh(tipGeo, tipMat);
+            tip.position.set(0, 1.02, 0);
+            group.add(tip);
+
+            // Eye
+            const eyeFrameGeo = new THREE.CylinderGeometry(0.11, 0.11, 0.04, 24);
+            const eyeFrameMat = new THREE.MeshStandardMaterial({ color: 0x424242, metalness: 0.7 });
+            const eyeFrame = new THREE.Mesh(eyeFrameGeo, eyeFrameMat);
+            eyeFrame.rotation.x = Math.PI / 2;
+            eyeFrame.position.set(0, 0.72, 0.2);
+            group.add(eyeFrame);
+
+            const eyeLensGeo = new THREE.SphereGeometry(0.09, 20, 20);
+            const eyeLensMat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.1 });
+            robotEyeMesh = new THREE.Mesh(eyeLensGeo, eyeLensMat);
+            robotEyeMesh.position.set(0, 0.72, 0.21);
+            group.add(robotEyeMesh);
+
+            const pupilGeo = new THREE.SphereGeometry(0.04, 16, 16);
+            const pupilMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+            const pupil = new THREE.Mesh(pupilGeo, pupilMat);
+            pupil.position.set(0, 0.72, 0.28);
+            group.add(pupil);
+
+            // Arms
+            const armGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.35, 12);
+            const armMat = new THREE.MeshStandardMaterial({ color: 0x616161, roughness: 0.5 });
+            
+            robotLeftArm = new THREE.Mesh(armGeo, armMat);
+            robotLeftArm.position.set(-0.33, 0.35, 0);
+            robotLeftArm.castShadow = true;
+            group.add(robotLeftArm);
+
+            robotRightArm = new THREE.Mesh(armGeo, armMat);
+            robotRightArm.position.set(0.33, 0.35, 0);
+            robotRightArm.castShadow = true;
+            group.add(robotRightArm);
+
+            // Legs & Feet
+            const legGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.2, 12);
+            const legMat = new THREE.MeshStandardMaterial({ color: 0x424242 });
+
+            robotLeftLeg = new THREE.Mesh(legGeo, legMat);
+            robotLeftLeg.position.set(-0.16, 0.08, 0);
+            robotLeftLeg.castShadow = true;
+            group.add(robotLeftLeg);
+
+            robotRightLeg = new THREE.Mesh(legGeo, legMat);
+            robotRightLeg.position.set(0.16, 0.08, 0);
+            robotRightLeg.castShadow = true;
+            group.add(robotRightLeg);
+
+            return group;
+        }
+
+        function initMekorama3D() {
+            const container = document.getElementById('mekorama-container');
+            if(!container) return;
+
+            if (isMekoramaInitialized) {
+                resetMekoramaLevel();
+                return;
+            }
+
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            // Scene
+            mekoramaScene = new THREE.Scene();
+            mekoramaScene.background = new THREE.Color(0xBFE3F7); 
+            mekoramaScene.fog = new THREE.Fog(0xBFE3F7, 18, 40);
+
+            // Camera (Orthographic Isometric)
+            const aspect = width / height;
+            const d = 5.5;
+            mekoramaCamera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 0.1, 100);
+            updateMekoramaCameraPosition();
+
+            // Renderer
+            mekoramaRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            mekoramaRenderer.setSize(width, height);
+            mekoramaRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            mekoramaRenderer.shadowMap.enabled = true;
+            mekoramaRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            container.innerHTML = '';
+            container.appendChild(mekoramaRenderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+            mekoramaScene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.75);
+            dirLight.position.set(12, 20, 10);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.camera.near = 0.5;
+            dirLight.shadow.camera.far = 50;
+            const sd = 8;
+            dirLight.shadow.camera.left = -sd;
+            dirLight.shadow.camera.right = sd;
+            dirLight.shadow.camera.top = sd;
+            dirLight.shadow.camera.bottom = -sd;
+            dirLight.shadow.bias = -0.0005;
+            mekoramaScene.add(dirLight);
+
+            // Build Level Diorama
+            mekoramaBlocks = [];
+            const levelGroup = new THREE.Group();
+            B01_LAYOUT.forEach(bData => {
+                const bMesh = createMekoramaBlockMesh(bData);
+                levelGroup.add(bMesh);
+                if (bData.walkable !== false) {
+                    mekoramaBlocks.push(bMesh);
+                }
+            });
+            mekoramaScene.add(levelGroup);
+
+            // Destination Tap Ring
+            const ringGeo = new THREE.RingGeometry(0.1, 0.3, 32);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x4DD0E1, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+            tapRingMesh = new THREE.Mesh(ringGeo, ringMat);
+            tapRingMesh.rotation.x = -Math.PI / 2;
+            tapRingMesh.visible = false;
+            mekoramaScene.add(tapRingMesh);
+
+            // Add Robot B
+            mekoramaRobotGroup = createRobotBMesh();
+            mekoramaCurrentGrid = { x: 1, y: 1, z: 1 };
+            mekoramaRobotGroup.position.set(1, 1.5, 1);
+            mekoramaScene.add(mekoramaRobotGroup);
+
+            // Events
+            container.addEventListener('pointerdown', onMekoramaPointerDown);
+            container.addEventListener('pointermove', onMekoramaPointerMove);
+            container.addEventListener('pointerup', onMekoramaPointerUp);
+            window.addEventListener('resize', onMekoramaResize);
+
+            isMekoramaInitialized = true;
+            updateSpeech("Guide Robot B to the Red Goal Spot! Click on walkable blocks!");
+            animateMekorama();
+        }
+
+        function updateMekoramaCameraPosition() {
+            const distance = 22;
+            const polarAngle = Math.atan(Math.SQRT2); 
+            
+            const x = 3 + distance * Math.sin(polarAngle) * Math.sin(mekoramaOrbitAngle);
+            const y = 1.5 + distance * Math.cos(polarAngle);
+            const z = 2 + distance * Math.sin(polarAngle) * Math.cos(mekoramaOrbitAngle);
+
+            mekoramaCamera.position.set(x, y, z);
+            mekoramaCamera.lookAt(3, 1.5, 2);
+        }
+
+        function rotateMekoramaCamera(dir) {
+            mekoramaTargetOrbitAngle += (Math.PI / 2) * dir;
+        }
+
+        function onMekoramaPointerDown(e) {
+            isMekoramaDragging = true;
+            previousMouseX = e.clientX;
+        }
+
+        function onMekoramaPointerMove(e) {
+            if (isMekoramaDragging) {
+                const deltaX = e.clientX - previousMouseX;
+                if (Math.abs(deltaX) > 3) {
+                    mekoramaTargetOrbitAngle += deltaX * 0.008;
+                    previousMouseX = e.clientX;
+                }
+            }
+        }
+
+        function onMekoramaPointerUp(e) {
+            if (isMekoramaDragging) {
+                isMekoramaDragging = false;
+            }
+
+            const container = document.getElementById('mekorama-container');
+            const rect = container.getBoundingClientRect();
+            mekoramaMouse.x = ((e.clientX - rect.left) / container.clientWidth) * 2 - 1;
+            mekoramaMouse.y = -((e.clientY - rect.top) / container.clientHeight) * 2 + 1;
+
+            mekoramaRaycaster.setFromCamera(mekoramaMouse, mekoramaCamera);
+            const intersects = mekoramaRaycaster.intersectObjects(mekoramaBlocks, true);
+
+            if (intersects.length > 0) {
+                let hitBlock = intersects[0].object;
+                while (hitBlock.parent && !hitBlock.userData.walkable) {
+                    hitBlock = hitBlock.parent;
+                }
+                if (hitBlock.userData && hitBlock.userData.walkable) {
+                    const targetGrid = { x: hitBlock.userData.gridX, y: hitBlock.userData.gridY, z: hitBlock.userData.gridZ };
+                    calculateMekoramaPath(targetGrid);
+                }
+            }
+        }
+
+        function calculateMekoramaPath(targetGrid) {
+            if (isMekoramaMoving) return;
+
+            const startKey = `${mekoramaCurrentGrid.x},${mekoramaCurrentGrid.y},${mekoramaCurrentGrid.z}`;
+            const targetKey = `${targetGrid.x},${targetGrid.y},${targetGrid.z}`;
+
+            if (startKey === targetKey) return;
+
+            const queue = [[mekoramaCurrentGrid]];
+            const visited = new Set([startKey]);
+
+            let foundPath = null;
+
+            while (queue.length > 0) {
+                const path = queue.shift();
+                const current = path[path.length - 1];
+
+                if (current.x === targetGrid.x && current.y === targetGrid.y && current.z === targetGrid.z) {
+                    foundPath = path;
+                    break;
+                }
+
+                const neighbors = B01_LAYOUT.filter(b => {
+                    const dx = Math.abs(b.x - current.x);
+                    const dy = Math.abs(b.y - current.y);
+                    const dz = Math.abs(b.z - current.z);
+                    return (dx + dz === 1) && (dy <= 1);
+                });
+
+                for (let n of neighbors) {
+                    const key = `${n.x},${n.y},${n.z}`;
+                    if (!visited.has(key)) {
+                        visited.add(key);
+                        queue.push([...path, { x: n.x, y: n.y, z: n.z }]);
+                    }
+                }
+            }
+
+            if (foundPath && foundPath.length > 1) {
+                mekoramaPath = foundPath.slice(1);
+                isMekoramaMoving = true;
+                
+                tapRingMesh.position.set(targetGrid.x, targetGrid.y + 0.51, targetGrid.z);
+                tapRingMesh.visible = true;
+                triggerHaptic('success');
+            } else {
+                triggerHaptic('error');
+            }
+        }
+
+        let moveProgress = 0;
+
+        function animateMekorama() {
+            if (state.currentSection !== 'mekorama') return;
+
+            requestAnimationFrame(animateMekorama);
+
+            // Damping Camera Orbit Rotation
+            mekoramaOrbitAngle += (mekoramaTargetOrbitAngle - mekoramaOrbitAngle) * 0.08;
+            updateMekoramaCameraPosition();
+
+            // Wobble Walk Movement Logic
+            if (isMekoramaMoving && mekoramaPath.length > 0) {
+                const nextStep = mekoramaPath[0];
+                const startPos = new THREE.Vector3(mekoramaCurrentGrid.x, mekoramaCurrentGrid.y + 0.5, mekoramaCurrentGrid.z);
+                const endPos = new THREE.Vector3(nextStep.x, nextStep.y + 0.5, nextStep.z);
+
+                moveProgress += 0.08; // Step speed
+
+                const currentPos = new THREE.Vector3().lerpVectors(startPos, endPos, Math.min(moveProgress, 1));
+                
+                // Parabolic Jump Bounce
+                const verticalBounce = Math.sin(Math.min(moveProgress, 1) * Math.PI) * 0.15;
+                currentPos.y += verticalBounce;
+                mekoramaRobotGroup.position.copy(currentPos);
+
+                // Body Roll Wobble
+                if (robotTorso) {
+                    robotTorso.rotation.z = Math.sin(moveProgress * Math.PI * 2) * 0.15;
+                }
+
+                // Limb Swinging
+                if (robotLeftArm && robotRightArm) {
+                    robotLeftArm.rotation.x = Math.sin(moveProgress * Math.PI * 2) * 0.5;
+                    robotRightArm.rotation.x = -Math.sin(moveProgress * Math.PI * 2) * 0.5;
+                }
+                if (robotLeftLeg && robotRightLeg) {
+                    robotLeftLeg.rotation.x = -Math.sin(moveProgress * Math.PI * 2) * 0.4;
+                    robotRightLeg.rotation.x = Math.sin(moveProgress * Math.PI * 2) * 0.4;
+                }
+
+                // Turn towards direction
+                const dirX = nextStep.x - mekoramaCurrentGrid.x;
+                const dirZ = nextStep.z - mekoramaCurrentGrid.z;
+                if (dirX !== 0 || dirZ !== 0) {
+                    const targetYaw = Math.atan2(dirX, dirZ);
+                    mekoramaRobotGroup.rotation.y += (targetYaw - mekoramaRobotGroup.rotation.y) * 0.3;
+                }
+
+                if (moveProgress >= 1) {
+                    moveProgress = 0;
+                    mekoramaCurrentGrid = nextStep;
+                    mekoramaPath.shift();
+
+                    if (mekoramaPath.length === 0) {
+                        isMekoramaMoving = false;
+                        tapRingMesh.visible = false;
+                        
+                        // Reset limbs posture
+                        if (robotTorso) robotTorso.rotation.z = 0;
+                        if (robotLeftArm) robotLeftArm.rotation.x = 0;
+                        if (robotRightArm) robotRightArm.rotation.x = 0;
+                        if (robotLeftLeg) robotLeftLeg.rotation.x = 0;
+                        if (robotRightLeg) robotRightLeg.rotation.x = 0;
+
+                        // Check Goal
+                        if (mekoramaCurrentGrid.x === mekoramaGoalGrid.x && 
+                            mekoramaCurrentGrid.y === mekoramaGoalGrid.y && 
+                            mekoramaCurrentGrid.z === mekoramaGoalGrid.z) {
+                            
+                            triggerMekoramaWin();
+                        }
+                    }
+                }
+            }
+
+            mekoramaRenderer.render(mekoramaScene, mekoramaCamera);
+        }
+
+        function triggerMekoramaWin() {
+            if (mekoramaGoalMesh) {
+                mekoramaGoalMesh.position.y = 0.48; // Button press animation
+            }
+            confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 } });
+            showFloatingFeedback("MEKORAMA CLEARED! 🤖⭐");
+            updateStars(5);
+            updateSpeech("AMAZING! You cleared Mekorama Level B-01!");
+
+            if (!state.unlockedLevels.includes('quiz')) {
+                state.unlockedLevels.push('quiz');
+                const node = document.getElementById('node-quiz');
+                if (node) {
+                    node.classList.remove('opacity-50', 'grayscale', 'pointer-events-none');
+                    node.classList.add('animate__animated', 'animate__rubberBand');
+                }
+            }
+
+            setTimeout(() => {
+                startMission('quiz');
+            }, 3000);
+        }
+
+        function resetMekoramaLevel() {
+            isMekoramaMoving = false;
+            mekoramaPath = [];
+            moveProgress = 0;
+            mekoramaCurrentGrid = { x: 1, y: 1, z: 1 };
+            if (mekoramaRobotGroup) {
+                mekoramaRobotGroup.position.set(1, 1.5, 1);
+                mekoramaRobotGroup.rotation.set(0, 0, 0);
+            }
+            if (mekoramaGoalMesh) {
+                mekoramaGoalMesh.position.y = 0.53;
+            }
+            if (tapRingMesh) tapRingMesh.visible = false;
+        }
+
+        function onMekoramaResize() {
+            const container = document.getElementById('mekorama-container');
+            if (!container || !mekoramaRenderer || !mekoramaCamera) return;
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            const aspect = w / h;
+            const d = 5.5;
+            mekoramaCamera.left = -d * aspect;
+            mekoramaCamera.right = d * aspect;
+            mekoramaCamera.top = d;
+            mekoramaCamera.bottom = -d;
+            mekoramaCamera.updateProjectionMatrix();
+            mekoramaRenderer.setSize(w, h);
+        }
+
+        function updateStars(count = 1) {
+            state.stars += count;
+            const el = document.getElementById('stars-count');
+            if (el) el.innerText = state.stars;
+        }
+
+        function createSparkles(element) {
+            if(!element) return;
+            const rect = element.getBoundingClientRect();
+            for(let i = 0; i < 8; i++) {
+                const sparkle = document.createElement('div');
+                sparkle.className = 'sparkle';
+                const size = Math.random() * 10 + 6;
+                sparkle.style.width = `${size}px`;
+                sparkle.style.height = `${size}px`;
+                sparkle.style.left = `${rect.left + rect.width / 2}px`;
+                sparkle.style.top = `${rect.top + rect.height / 2}px`;
+                
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.random() * 60 + 20;
+                sparkle.style.setProperty('--tx', `${Math.cos(angle) * dist}px`);
+                sparkle.style.setProperty('--ty', `${Math.sin(angle) * dist}px`);
+                
+                document.body.appendChild(sparkle);
+                setTimeout(() => sparkle.remove(), 800);
+            }
+        }
+
+        function renderQuiz() {
+            const card = document.getElementById('quiz-card');
+            if(!card) return;
+
+            if (state.quizIdx >= originalVocabulary.length) {
+                finishQuiz();
+                return;
+            }
+
+            const current = originalVocabulary[state.quizIdx];
+            const wrongOptions = originalVocabulary.filter(v => v.word !== current.word).sort(() => Math.random() - 0.5).slice(0, 3);
+            const options = [current, ...wrongOptions].sort(() => Math.random() - 0.5);
+
+            card.innerHTML = `
+                <div class="absolute top-6 right-6 font-bold text-slate-400">
+                    ${state.quizIdx + 1} / ${originalVocabulary.length}
+                </div>
+                <div class="text-8xl mb-6 animate__animated animate__bounceIn cursor-pointer" onclick="playWord('${current.word}')">
+                    ${current.icon}
+                </div>
+                <h3 class="text-2xl font-bold-game text-indigo-600 mb-8 uppercase">What is this word?</h3>
+                <div class="grid grid-cols-2 gap-4 max-w-lg mx-auto w-full">
+                    ${options.map(opt => `
+                        <button onclick="checkQuizAnswer('${opt.word}', '${current.word}', this)" class="glass py-4 px-6 font-bold-game text-2xl text-slate-700 btn-bounce uppercase border-2 border-indigo-100 hover:border-indigo-400">
+                            ${opt.word}
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+
+            playWord(current.word);
+        }
+
+        function checkQuizAnswer(selected, correct, btn) {
+            if (selected === correct) {
+                playWord(correct);
+                state.quizStreak++;
+                if (state.quizStreak >= 3) {
+                    showComboFeedback(state.quizStreak);
+                } else {
+                    showFloatingFeedback();
+                }
+                runUFOAnimation(true);
+                updateStars(2);
+                confetti({ particleCount: 40, spread: 60 });
+                state.quizIdx++;
+                setTimeout(renderQuiz, 1200);
+            } else {
+                state.quizStreak = 0;
+                state.wrongQuizWords.add(correct);
+                runUFOAnimation(false);
+                triggerHaptic('error');
+                btn.classList.add('animate__animated', 'animate__headShake', 'bg-red-200');
+                setTimeout(() => btn.classList.remove('animate__animated', 'animate__headShake', 'bg-red-200'), 500);
+                updateSpeech(`Try again! The word is ${correct}.`);
+            }
+        }
+
+        function finishQuiz() {
+            const card = document.getElementById('quiz-card');
+            state.finalScore = Math.min(100, Math.round((state.stars / (originalVocabulary.length * 5)) * 100) || 100);
+
+            card.innerHTML = `
+                <div class="text-7xl mb-4 animate__animated animate__tada">🏆</div>
+                <h2 class="text-4xl font-bold-game text-indigo-600 mb-2">QUEST COMPLETED!</h2>
+                <p class="text-slate-600 text-lg mb-6">Congratulations <span class="font-bold text-indigo-600">${state.studentName}</span>!</p>
+                <div class="glass max-w-sm mx-auto p-6 mb-8 bg-indigo-50/50">
+                    <div class="text-3xl font-bold-game text-indigo-600 mb-2">💎 ${state.stars} STARS</div>
+                    <div class="text-sm font-bold text-slate-500">Mastery Level: ${state.finalScore}%</div>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button onclick="sendResultToSheet()" class="px-8 py-4 bg-green-500 text-white rounded-2xl font-bold-game text-xl btn-bounce">
+                        SEND RESULTS 📤
+                    </button>
+                    <button onclick="showSection('map')" class="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-bold-game text-xl btn-bounce">
+                        RETURN HOME 🏠
+                    </button>
+                </div>
+            `;
+
+            confetti({ particleCount: 200, spread: 120, origin: { y: 0.5 } });
+            updateSpeech(`Congratulations ${state.studentName}! You completed the entire Quest!`);
+        }
+
+        function sendResultToSheet() {
+            if(!ENDPOINT_URL) return;
+            const data = {
+                name: state.studentName,
+                hero: state.heroName,
+                stars: state.stars,
+                score: state.finalScore,
+                date: new Date().toISOString()
+            };
+            
+            fetch(ENDPOINT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).then(() => {
+                showFloatingFeedback("SAVED TO SHEET! 📋");
+            }).catch(err => {
+                console.error("Sheet send error:", err);
+                showFloatingFeedback("SAVED! 📋");
+            });
+        }
+    </script>
+</body>
+</html>
